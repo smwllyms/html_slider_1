@@ -1,0 +1,212 @@
+<html>
+    <head>
+        <style>
+            body {
+                margin: 0;
+                padding: 0;
+            }
+            #container {
+                width:100%;
+                height:300px;
+                background-color: green;
+                white-space: nowrap;
+                overflow: hidden;
+                border: none;
+                font-size: 0;
+            }
+            .cycle {
+                display: inline-block;
+                /*width: 33.33333%;*/
+                height: 100%;
+                min-height: 100%;
+                text-align: center;
+            }
+            .cell {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100%;
+                width: 100%;
+                vertical-align: bottom;
+            }
+            .content { 
+                display:inline-block;
+                vertical-align: middle;
+                background-color: white;
+                width: 50px;
+                height: 50px;
+                font-size: 36px;
+            }
+            ::-webkit-scrollbar {
+                width: 2px;
+                background: transparent;
+            }
+            /************************************************/
+            #buttons {
+                width: 100%;
+                display: inline-block;
+                text-align: center;
+            }
+            .btn {
+                display: inline-block;
+                padding: 10px 10px;
+            }
+
+        </style>
+    </head>
+    <body>
+        <div id="container">
+            <div class="cycle">
+                <div class="cell">
+                    <div class="content">1</div>
+                </div>
+            </div>
+            <div class="cycle">
+                <div class="cell">
+                    <div class="content">2</div>
+                </div>
+            </div>
+            <div class="cycle">
+                <div class="cell">
+                    <div class="content">3</div>
+                </div>
+            </div>
+            <div class="cycle">
+                <div class="cell">
+                    <div class="content">4</div>
+                </div>
+            </div>
+            <div class="cycle">
+                <div class="cell">
+                    <div class="content">5</div>
+                </div>
+            </div>
+            <div class="cycle">
+                <div class="cell">
+                    <div class="content">6</div>
+                </div>
+            </div>
+            <div class="cycle">
+                <div class="cell">
+                    <div class="content">7</div>
+                </div>
+            </div>
+        </div>
+        <div id="buttons">
+            <div class="btn">
+                <button onclick="scroll_cycle('left')"><
+
+                </button>
+            </div>
+            <div class="btn">
+                <button onclick="scroll_cycle('right')">>
+                    
+                </button>
+            </div>
+        </div>
+        <div id="out">
+        </div>
+        <div id="controls">
+            Height of the container (px): <input type="text" id="height_ip"> <button onclick="set_height_cont(document.getElementById('height_ip').value)">Set</button><br/>
+            Number of Elements to Show On Screen at Once: <input type="range" min="1" max="5" step="1" id="num_elem_ip"> <script>document.getElementById("num_elem_ip").addEventListener('change', (event) => { document.getElementById("show_num_el_ip").textContent = event.target.value; });</script><div id="show_num_el_ip" style="display: inline;"></div> <button onclick="set_num_elem(document.getElementById('num_elem_ip').value)">Set</button><br/>
+            Time to Update Cell Positions after Scroll (may get ugly) (s) <input type="range" min="0.5" max="0.8" step="0.05" id="time_ip"> <script>document.getElementById("time_ip").addEventListener('change', (event) => { document.getElementById("show_time_ip").textContent = event.target.value; });</script><div id="show_time_ip" style="display: inline;"></div> <button onclick="set_time(document.getElementById('time_ip').value)">Set</button><br/>
+        </div>
+    </body>
+    <script>
+        container = document.getElementById("container"); // get container
+        elements = container.getElementsByClassName("cycle"); // (eventually deep copy) directly reference cycle elements, used to initialize widths of elements in init()
+        lngth = elements.length; // number of cycle elements
+        num_eos = 5; // default number of cycle elements to show on screen
+        wdth = container.innerWidth / num_eos; // default width of each cycle element (inversely proportional to num elements on screen, always 7 elements)
+        time = 0.7; // time it takes to shift elements back after scroll (part of algorithm)
+        can_click = true; // used to prevent spamming, also depends on time variable above
+        init(num_eos, elements); 
+        elements = clone_elements(elements); // create deep copy of elements
+
+        function init(num_elem, elems) {
+            for (i = 0; i < elems.length; i++) { // iterate through elements
+                elems[i].style.width = ((1 / num_elem)*100).toString() + "%"; // make width the percentage
+            }
+            num_elem = null; // clean
+            elems = null;
+        }
+
+        function clone_elements(elem) { // deep copy
+            new_elem = []; 
+            for (i = 0; i < elem.length; i++) {
+                new_elem[i] = elem[i].cloneNode(true);
+            }
+            elem = null;
+            return new_elem;
+        }
+
+        // @param direction - go left or right
+        function scroll_cycle(direction) {
+            if (can_click) {
+                can_click = false; //disable clicking until we successfully scroll
+                container.style.overflow = "scroll"; // allows us to scroll temporarily
+                if (direction === "left") {
+                    container.scrollBy(-wdth, 0);
+                } else {
+                    container.scrollBy(wdth, 0);
+                }
+                setTimeout(delayed_func, time * 1000, direction); //delay this function's execution by our time variable, this function will add/remove elements as part of algorithm
+                setTimeout(function() {can_click = true;}, time * 1000); // basically allows us to click and do function again right after we finish this function
+                container.style.overflow = "hidden"; // now user can't scroll again
+                direction = null;
+            }
+        }
+
+        function delayed_func(direction) {
+            if (direction === "left") { // add cycle element from deep copy to the beginning we're scrolling left (from alg)
+                container.insertAdjacentHTML("afterbegin", elements[elements.length - 1].outerHTML);
+                container.getElementsByClassName("cycle")[elements.length].outerHTML = ""; // delete the last element
+            } else { // add cycle element from deep copy to the end because we're scrolling to the right (from alg)
+                container.insertAdjacentHTML("beforeend", elements[0].outerHTML);
+                container.getElementsByClassName("cycle")[0].outerHTML = ""; // remove beginning
+            }
+            resize_container(); // instantly scrolls us to the middle of the container, allowing us to have room to scroll left and right (from algorithm)
+            elements = clone_elements(container.getElementsByClassName("cycle")); // remake our deep copy, helps us reorder and update positions of cycle elements
+            direction = null;
+        }
+
+        function resize_container() {
+            container.style.scrollBehavior = "auto";
+            container.style.overflow = "scroll";
+            wdth = window.innerWidth / num_eos;
+            container.scrollTo(0,0);
+            container.scrollBy(wdth, 0);          
+            container.style.overflow = "hidden";
+            container.style.scrollBehavior = "smooth";
+        }
+
+        function set_height_cont(h) {
+            if (h > 99 && h < 801) {
+                h = h.toString() + "px";
+                container.style.height = h;
+                resize_container();
+            }
+        }
+
+        function set_num_elem(n) {
+            num_elem = n;
+            num_eos = n;
+            init(num_eos, container.getElementsByClassName("cycle"));
+            init(num_eos, elements);
+            resize_container();
+        }
+
+        function set_time(t) {
+            time = t;
+            out.textContent = t;
+        }
+        
+        resize_container();
+        document.getElementById("show_num_el_ip").textContent = num_eos;
+        document.getElementById("num_elem_ip").value = num_eos;
+        document.getElementById("show_time_ip").textContent = time;
+        document.getElementById("time_ip").value = time;
+        window.onresize = resize_container;
+
+    </script>
+</html>
